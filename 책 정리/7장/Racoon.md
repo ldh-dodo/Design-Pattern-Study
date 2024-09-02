@@ -488,3 +488,509 @@ console.log(car instanceof Car);
 - 같은 속성을 공유하는 여러 개의 작은 객체 또는 컴포넌트를 다뤄야할 때
 - 덕 타이밍같은 API 규칙만 충족하면 되는 다른 객체의 인스턴스와 함께 객체를 구성할 때
   - 디커플링에도 유용
+
+# 구조 패턴
+
+- 클래스와 객체의 구성을 다룸
+
+다음의 패턴에 대해 배울 것임
+
+- 퍼사드 패턴
+- 믹스인 패턴
+- 데코레이터 패턴
+- 플라이웨이트 패턴
+
+# 퍼사드 패턴
+
+- Facade란, 실제 모습을 숨기고 꾸며낸 겉모습만을 세상에 드러내는 것을 의미함
+- 퍼사드패턴은 심층적인 복잡성을 숨기고, 사용하기 편리한 높은 수준의 인터페이스를 제공하는 패턴
+- jQuery와 같은 자바스크립트 라이브러리에서 흔히 볼 수 있는 구조 패턴
+- 코드의 구현 부분과 사용 부분을 분리함
+
+## 장점
+
+- 사용하기 쉬움
+- 패턴 구현에 필요한 코드의 양이 적음
+
+```jsx
+const addMyEvent = (el, ev, fn) => {
+	if(el.addEventListener){
+		el.addEventListener(ev, fn, false);
+		} else if(el.attachEvent){
+			el.attachEvent(`on${ev}`, fn);
+			} else {
+			el[`on${ev}`] = fn;
+		}
+};
+```
+
+# 믹스인  패턴
+
+- 믹스인은 C++나 Lisp 같은 전통적인 프로그래밍 언어에서 서브클래스가 쉽게 상속받아 기능을 재사용할 수 있도록 하는 클래스
+
+### 서브클래싱
+
+- 부모 클래스 객체에서 속성을 상속받아 새로운 객체를 만드는 것을 의미함
+- 부모 클래스의 먼저 정의된 메서드를 오버라이드 하는 것도 가능
+- 오버라이드된 부모 클래스의 메서드를 호출할 수도 있음
+    - 이를 메서드 체이닝이라고 부름
+- 마찬가지로, 부모 클래스의 생성자를 호출할 수도 있음
+    - 이를 생성자 체이닝이라고 부름
+
+### 자바스크립트에서의 믹스인
+
+- 자바스크립트에서는 기능의 확장을 위해 믹스인의 상속을 이용함
+- 자식 클래스는 부모 클래스로부터 메서드와 속성을 부여받고, 자신만의 속성과 메서드를 정의할 수도 있음
+- 믹스인은 최소한의 복잡성으로 객체의 기능을 빌리거나 상속할 수 있게 해줌
+
+### 믹스인 코드
+
+```jsx
+const myMixins = superclass => 
+	class extends superclass {
+		moveUp(){
+			console.log('move up');
+		}
+		moveDown(){
+			console.log('move down');
+		}
+		stop(){
+			console.log('stop! in te name of love!');
+		}
+	};
+```
+
+```jsx
+// CarAnimator 생성자의 기본 구조
+class CarAnimator{
+	moveLeft(){
+		console.log('move left');
+		}
+	}
+	// PersonAnimator 생성자의 기본 구조
+	class PersonAnimator{
+		moveRandomly(){
+			/*...*/
+			}
+	}
+	
+	// MyMixins을 사용하여 CarAnimator 확장
+	class MyAnimator extends MyMixins(CarAnimator){}
+	
+	// carAnimator의 새 인스턴스 생성
+	const myAnimator = new MyAnimator();
+	myAnimator.moveLeft();
+	myAnimator.moveDown();
+	myAnimator.stop();
+```
+
+이렇게 믹스인을 이용하면, 비슷한 기능을 클래스에 추가하는 작업이 꽤 간단해진다.
+
+### 장점
+
+- 함수의 중복을 줄이고 재사용성을 높인다
+- 객체 인스턴스 사이에 공유되는 기능이 있다면, 중복을 피하고 고유 기능을 구현하는데에 집중할 수 있음
+
+### 단점
+
+- 몇몇의 개발자들은 클래스나 객체의 프로토타입에 기능을 주입하는 것을 나쁜 방법이라고 여김
+    - 프로토타입 오염과 함수의 출처에 대한 불확실성을 초래하기 때문
+
+# 데코레이터 패턴
+
+- 데코레이터 패턴은 코드 재사용을 목표로 하는 구조패턴
+- 믹스인과 마찬가지로 객체 서브클래싱의 다른 방법이라고 생각하면 됨
+- 기본적으로 클래스에 동적으로 기능을 추가하기 위해 사용함
+- 애플리케이션의 기능이 다양한 타입의 객체를 필요로 할 때 적합
+- 객체의 생성을 신경 쓰지 않는 대신 확장에 초점을 둠
+
+### 장점
+
+- 기존 시스템의 내부 코드를 힘겹게 바꾸지 않고도 기능을 추가할 수 있음
+
+```jsx
+// Vehicle 생성자
+class Vehicle{
+	constructor(vehicleType){
+		// 일부 합리적인 기본값
+		this.vehicleType = vehicleType || 'car';
+		this.model = 'default';
+		this.license = '00000-000';
+	}
+}
+
+// 기본 Vehicle에 대한 인스턴스
+const testInstance = new Vehicle('car');
+console.log(testInstance);
+
+// 데코레이트 될 새로운 차량 인스턴스를 생성합니다
+const truck = new Vehicle('truck');
+
+// Vehicle에 추가하는 새로운 기능 
+truck.setModel = function(modelName){
+	this.model = modelName;
+}
+
+truck.setColor = function(color){
+	this.color = color;
+}
+```
+
+해당 코드만 보기에는 데코레이터 패턴의 이점을 보여주기에는 부족하니, 추가로 예시를 살펴보자.
+
+```jsx
+class MacBook {
+	constructor(){
+		this.cost = 997;
+		this.screenSize = 11.6;
+	}
+	getCost(){
+		return this.cost;
+	}
+	getScreenSize(){
+		return this.screenSize;
+	}
+}
+
+// 데코레이터 1
+class Memory extends MacBook {
+	constructor(macBook){
+		super();
+		this.macBook = macBook;
+	}
+	getCost() {
+		return this.macBook.getCost() + 75;
+	}
+}
+
+// 데코레이터 2
+class Engraving extends MacBook{
+	constructor(macBook){
+		super();
+		this.macBook = macBook;
+	}
+	getCost() {
+		return this.macBook.getCost() + 200;
+	}
+}
+
+// 데코레이터 3
+class Insurance extends MacBook{
+	constructor(macBook){
+		super();
+		this.macBook = macBook;
+	}
+	getCost(){
+		return this.macBook.getCost() + 250;
+	}
+}
+
+let mb = new MacBook();
+
+// 데코레이터 초기화
+mb = new Memory(mb);
+mb = new Engraving(mb);
+mb = new Insurance(mb);
+```
+
+해당 예제에서 맥북의 업그레이드에 필요한 추가 비용을 반환하기 위해 MacBook 부모클래스 객체의 .getCost() 함수를 데코레이터로 오버라이드 했다.
+
+# 플라이웨이트 패턴
+
+- 반복되고 느리고 비효율적으로 데이터를 공유하는 코드를 최적화하는 해결 방법
+- 연관된 객체끼리 데이터를 공유하게 하면서 애플리케이션의 메모리를 ‘최소화’ 하는 목적을 가짐
+    - 목표 : 메모리 공간의 경량화
+- 여러 비슷한 객체나 데이터 구조에서 공통으로 사용되는 부분 만을 하나의 외부 객체로 내보내는 것으로 이루어짐
+- 각 객체를 데이터에 저장하기보다, 하나의 의존 외부 데이터에 모아서 저장
+
+## 사용법
+
+1. 데이터 레이어에서 메모리에 저장된 수많은 비슷한 객체 사이로 데이터를 공유하는 방법
+2. 비슷한 동작을 하는 이벤트 핸들러를 모든 자식 요소에 등록하기보다는 부모 요소 같은 중앙 이벤트 관리자에게 맡기는 방법
+
+→ 전통적으로는 1번 방식이 많이 사용됨
+
+## 데이터 공유
+
+- 내재적 상태
+    - 객체의 내부 메서드에 필요한 것. (없으면 동작 X)
+- 외재적 상태
+    - 제거되어 외부에 저장될 수 있는 정보
+    - 해당 정보를 다룰 때는 따로 관리자를 사용함. 한 가지 방법으로는, 플라이웨이트 객체와 내재적 상태를 보관하는 중앙 데이터베이스를 관리자로 사용하는 것이 있음
+
+# 전통적인 플라이웨이트 구현 방법
+
+- 플라이웨이트 패턴은 지금껏 자바스크립트에서 많이 사용되지 않아서, 자바나 C++ 생태계에서 영감을 얻어 구현
+- 보여줄 샘플 코드는 아래 세 가지 특징을 가짐
+
+### 세 가지 특징
+
+- 플라이웨이트 : 외부의 상태를 받아 작동할 수 있게 하는 인터페이스
+- 구체적 플라이웨이트 : 플라이웨이트 인터페이스를 실제로 구현하고 내부 상태를 저장
+    - 다양한 컨텍스트 사이에서 공유될 수 있어야 하고, 외부 상태를 조작할 수 있어야 함
+- 플라이웨이트 팩토리 : 플라이웨이트 객체를 생성하고 관리함.
+    - 플라이웨이트를 공유할 수 있도록 보장해줌
+    - 개별 인스턴스가 필요할 때 재사용할 수 있도록 관리함
+
+### 메소드 설명
+
+- CoffeOrder : 플라이웨이트
+- CoffeeFlavor : 구체적 플라이웨이트
+- CoffeOrderContext : 헬퍼
+- CoffeFlavorFactory : 플라이웨이트 팩토리
+- testFlyweight : 플라이웨이트 활용
+
+### implements 덕 펀칭하기
+
+- 덕 펀칭 : 런타임 소스를 수정할 필요 없이 언어나 솔루션의 기능을 확장할 수 있게 해줌
+- 다음 코드에서, 인터페이스를 구현하기 위해 자바의 키워드(implements)를 필요로 하지만, 자바스크립트에는 원래 없는 기능이므로 덕 펀칭을 해볼 것임
+- Function.prototype.implementsFor는 객체 생성자에 작용하며 부모 클래스 또는 객체를 받아들여 일반적인 상속 또는(함수일 때) 또는 가상 상속(객체일 때)을 이용해 상속 받는다
+
+```jsx
+// 인터페이스의 구현을 시뮬레이션 하기 위한 유틸리티 크래스
+
+class InterfaceImplementation{
+	static implementsFor(superclassOrInterface){
+		if(superclassOrInterface instanceof Function){
+			this.prototype = Object.create(superclassOrInterface.prototype);
+			this.prototype.constructor = this;
+			this.prototype.parent = superclassOrInterface.prototype;
+		} else {
+			this.prototpye = Object.create(superclassOrInterface);
+			this.prototype.constructor = this;
+			this.prototype.parent = superclassOrInterface;
+	}
+```
+
+해당 코드는 implements 키워드의 부재를 보완하여, 함수가 인터페이스를 상속하도록 만들어준다
+
+이제 CoffeFlavor은 CoffeeOrder 인터페이스를 구현하며, 사용하기 위해서는 인터페이스에 명시된 메서드를 반드시 구현해야 한다.
+
+```jsx
+// CoffeeOrder 인터페이스
+const CoffeeOrder = {
+	serveCoffee(context) {},
+	getFlavor() {},
+};
+
+class CoffeeFlavor extends InterfaceImplementation{
+	constructor(newFlavor){
+		super();
+		this.flavor = newFlavor;
+	}
+	getFlavor(){
+		return this.flavor;
+	}
+	serveCoffe(context){
+		console.log(`Serving Coffee flavor ${this.flavor} to
+			table ${context.getTable()}`); // 커피 제공 로그
+	}
+}
+
+// CoffeeOrder 인터페이스 구현
+CoffeeFlavor.implementsFor(CoffeeOrder);
+
+const CoffeeOrderContext = (tableNumber) => ({
+	getTable(){
+		return tableNumber;
+	},
+});
+
+class CoffeeFalvorFactory {
+	constructor(){
+		this.flavors = {};
+		this.length = 0;
+	}
+	getCoffeeFlavor(flavorName){
+		let flavor = this.flavors[flavorName];
+		if(!flavor) {
+			flavor = new CoffeeFlavor(flavorName);
+			this.flavors[flavorName] = flavor;
+			this.length++;
+		}
+		return flavor;
+	}
+	getTotalCoffeFlavorsMade(){
+		return this.length;
+	}
+}
+
+// 사용 예시
+
+const testFlyweight = () => {
+	const flavors = [];
+	const tables = [];
+	let ordersMade = 0;
+	const flavorFactory = new CoffeeFlavorFactory();
+	
+	function takeOrders(flavorIn, table){
+		flavors.push(flavorFactory.getCoffeeFlavor(flavorIn));
+		tables.push(CoffeeOrderContext(table));
+		ordersMade++;
+	}
+	
+	// 주문 처리
+	takeOrders('Cappuccino', 2);
+	
+	// 주문 제공
+	for(let i = 0; i < ordersMade; ++i){
+			flavors[i].serveCoffee(tables[i]));
+	}
+	
+	console.log(' ');
+	console.log(`total CoffeeFlavor objects made:
+		${flavorFactory.getTotalCoffeeFlavorMade()}`);
+	};
+	
+	testFlyWeight();
+
+```
+
+## 중앙 집중식 이벤트 핸들링 방법
+
+- 사용자 액션(예 : 클릭, 마우스 오버)에 따라 실행되는 비슷한 동작을 가진 여러 비슷한 요소들이 있다고 가정
+
+부모 컨테이너 내부의 각 링크 요소에 ‘클릭’ 이벤트를 바인딩하지 말고, 최상위 컨테이너에 플라이웨이트를 부착하여 하위 요소로부터 전달되는 이벤트를 감지할 수 있도록 할 수 있음
+
+### 코드 소개 전 설명
+
+플라이웨이트의 로직을 캡슐화하여 담아두기 위해 stateManager 네임 스페이스를 사용하고, div 컨테이너에 클릭 이벤트를 바인드하기 위해 jQuery를 사용함.
+
+그 전에 unbind 이벤트를 통해 컨테이너에 붙은 다른 핸들러를 떼어내도록 한다.
+
+정확히 어떤 자식 요소가 클릭되었는지 확인하기 위해서 target을 체크한다. target은 부모와 상관없이 클릭된 요소가 어떤 것인지에 대한 참조를 제공함.
+
+중요한 것은, 페이지가 로드되고 난 후, 모든 자식 요소들에 이벤트를 바인딩할 필요 없이 click 이벤트를 다룰 수 있다는 것.
+
+```html
+<div id = "container">
+	<div class = "toggle"> More Info (Address)
+		<span class="info">
+			This is more information
+		</span>
+	</div>
+	<div class = "toggle">Even More Info (Map)
+		<span class ="info">
+			<iframe src="MAPS_URL"></iframe>
+		</span>
+	</div>
+</div>
+
+<script>
+	<function() {
+		const stateManager = {
+			fly(){
+				const self = this;
+				$('#container')
+					.off()
+					.on('click', 'div.toggle', function() {
+						self.handleClick(this);
+					});
+				},
+				handleClick(elem){
+					$(elem)
+						.find('span')
+						.toggle('slow');
+					},
+				};
+				
+				// 이벤트 리스너 초기화
+				stateManager.fly();
+			})();
+</script>
+```
+
+해당 방식의 장점은 개별적으로 관리되는 동작을 하나의 동작으로 바꾸어 메모리 절약이 가능하게 해준다는 점이다.
+
+# 행위 패턴
+
+- 행위 패턴은 객체 간의 의사소통을 돕는 패턴
+- 시스템 내 서로 다른 객체 간의 의사소통 방식을 개선하고 간소화하는 것이 목적
+
+### 자바스크립트의 행위 패턴 종류
+
+- 관찰자 패턴
+- 중재자 패턴
+- 커맨드 패턴
+
+# 관찰자 패턴
+
+- 관찰자 패턴은 한 객체가 변경될 때 다른 객체들에 변경되었음을 알릴 수 있게 해주는 패턴
+- 변경된 객체는 누가 자신을 구독하는지 알 필요 없이 알림을 보낼 수 있음
+- 한 객체(주체)를 관찰하는 여러 객체들(관찰자)이 존재하며, 주체의 상태가 변화하면 관찰자들에게 자동으로 알림을 보냄
+- 관찰자가 더 이상 주체의 변경에 대한 알림을 받고 싶지 않을 경우, 관찰자 목록에서 제거 가능
+
+## 관찰자 패턴의 요소
+
+- 주체 : 관찰자 리스트를 관리하고, 추가와 삭제를 가능하게 합니다.
+- 관찰자 : 주체의 상태 변화 알림을 감지하는 update 인터페이스를 제공합니다.
+- 구체적 주체(ConcreteSubject) : 상태 변화에 대한 알림을 모든 관찰자에게 전달하고, ConcreteObserver의 상태를 저장합니다.
+- 구체적 관찰자(ConcreteObserver) : ConcreteSubject의 참조를 저장하고, 관찰자의 update 인터페이스를 구현하여 주체의 상태 변화와 관찰자의 상태 변화가 일치할 수 있도록 합니다.
+
+### 주체가 가질 수 있는 관찰자 목록 구현 코드
+
+```jsx
+class ObserverList {
+	constructor() {
+		this.observerList = [];
+	}
+	add(obj) {
+		return this.observerList.push(obj);
+	}
+	count() {
+		return this.observerList.length;
+	}
+	get(index) {
+		if(index > -1 && index < this.observerList.length) {
+			return this.observerList[index];
+		}
+	}
+	indexOf(obj, startIndex) {
+		let i = startIndex;
+		
+		while(i < this.observerList.length) {
+			if(this.observerList[i] === obj) {
+				return i;
+			}
+		}
+		return -1;
+	}
+	
+	removeAt(index){
+		this.observerList.splice(index, 1);
+		}
+	}
+```
+
+### 관찰자 목록 추가, 제거, 알림 기능 구현 코드
+
+```jsx
+class Subject {
+	constructor(){
+		this.observers = new ObserverList();
+	}
+	
+	addObserver(observer){
+		this.observers.add(observer);
+	}
+	
+	removeObserver(observer){
+		this.observers.removeAt(this.observers.indexOf(observer, 0));
+	}
+	notify(context){
+		const observerCount = this.observers.count();
+		for(let i = 0; i < observerCount; i++){
+			this.observers.get(i).update(context);
+		}
+	}
+}
+
+// 관찰자 클래스
+
+class Observer {
+	constructor() {}
+	update () {
+		// ...
+	}
+}
+```
