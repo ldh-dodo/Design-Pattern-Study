@@ -1093,3 +1093,120 @@ const events = (function () {
     - 이를 통해 워크플로와 프로세스를 캡슐화 함
     - 또한 여러 객체 사이를 조율해 시스템이 원하는 대로 동작하도록 함
 - 워크플로의 각 객체는 각자의 역할을 수행하는 방법을 알고 있지만, 중재자는 보다 거시적인 차원에서의 결정을 통해 객체들에 적절한 작업 시기를 알려줌
+
+## 이벤트 집합 패턴(발행/구독)의 활용
+
+- 일반적으로 이벤트 집합 패턴은 직접적인 구독 관계가 많아질 경우 또는 전혀 관련 없는 객체들 간의 소통이 필요할 때 사용됨
+- jQuery의 on() 메서드는, 이벤트를 발생시키는 DOM 요소가 너무 많은 경우에 활용하면 좋은 예시. 10개, 20개, 200개 이상의 DOM 요소에 각각 ‘클릭’ 이벤트를 등록하는 것은 비효율적임
+
+## 중재자 패턴의 활용
+
+- 중재자 패턴은 두 개 이상의 객체가 간접적인 관계를 가지고 있고 비즈니스 로직이나 워크플로에 따라 상호작용 및 조정이 필요한 경우에 유용함
+
+## 발행/구독 패턴과 중재자 패턴 결합하기
+
+- 두 패턴이 왜 혼용되면 안 되는지에 대한 이해를 돕기 위해, 두 패턴을 함께 사용해보자
+
+```jsx
+const MenuItem = MyFrameworkView.extend({
+	events: {
+		'click .thatThing' : 'clickedIt',
+	},
+	
+	clickedIt(e){
+		e.preventDefault();
+		
+		// "menu:click:foo"를 실행한다고 가정
+		MyFramework.trigger(`menu:click:${this.model.get('name')}`);
+	},
+});
+
+// 애플리케이션의 다른 곳에서 구현
+
+class MyWorkflow {
+	constructor() {
+		MyFramework.on('menu:click:foo', this.doStuff, this);
+	}
+	
+	static doStuff(){
+		// 이곳에 여러 객체를 인스턴스화
+		// 객체의 이벤트 핸들러 설정
+		// 모든 객체를 의미 있는 워크플로로 조정
+	}
+}
+```
+
+이 예제에서는 MenuItem이 클릭될 때 menu:click:foo 이벤트가 발생한다. MyWorkflow 클래스의 인스턴스가 이 이벤트를 처리하고 모든 객체를 조율하여 이상적인 사용자 경험과 워크플로를 구현한다.
+
+이벤트 집합 패턴을 통해 메뉴와 워크플로 사이의 명확한 분리를 구현할 수 있고, 중재자 패틀 통해 워크플로의 관리 및 유지보수성을 강화할 수 있는 코드이다.
+
+# 중재자 패턴 vs 퍼사드 패턴
+
+- 두 패턴 모두 기존 모듈의 기능을 추상화하지만 미묘한 차이점이 존재
+- 중재자 패턴은 모듈이 명시적으로 중재자를 참조함으로써, 모듈 간의 상호작용을 중앙집중화함.
+    - 이는 본질적으로 다방향성을 지님
+- 반면에 퍼사드 패턴은 모듈 또는 시스템에 직관적인 인터페이스를 제공하지만 추가 기능을 구현하지는 않음
+    - 시스템 내 다른 모듈은 퍼사드의 개념을 직접적으로 인지하지 못하므로 단방향성을 지님
+
+# 커맨드 패턴
+
+- 커맨드 패턴은 메서드 호출, 요청 또는 작업을 단일 객체로 캡슐화하여 추후에 실행할 수 있도록 해줌
+- 이를 통해 실행 시점을 유연하게 조정하고 호출을 매개변수화할 수 있음
+- 또한 커맨드 패턴은 명령을 실행하는 객체와 명령을 호출하는 객체 간의 결합을 느슨하게 하여 구체적인 클래스(객체)의 변경에 대한 유연성을 향상시킴
+- 커맨드 패턴의 기본 원칙은 명령을 내리는 객체와 명령을 실행하는 객체의 책임을 분리한다는 점
+    - 커맨드 패턴은 이러한 책임을 다른 객체에 위임함으로써 역할 분리를 실현함
+- 구현 측면에서 단순 커맨드 개체는 ‘실행할 동작’ 과 ‘해당 동작을 호출할 객체’를 연결
+- 주요 장점은 인터페이가 동일한 모든 커맨드 객체를 쉽게 교체할 수 있다는 점
+
+```jsx
+const CarManager = {
+	// 정보 조회
+	requestInfo(model, id) {
+		return `The information for ${model} with ID ${id} is foobar`;
+	},
+	
+	// 자동차 구매
+	buyVehicle(model, id){
+		return `You have successfully purchased Item ${id}, a ${model}`;
+	},
+	
+	// 시승 신청
+	arrangeViewing(model, id){
+		return `You have booked a viewing of ${model} ( ${id} ) `;
+	},
+};
+```
+
+- CarManager 객체는 자동차 정보 조회, 구매, 시승 신청 명령을 실행하는 커맨드 객체
+- 이 객체의 메서드를 직접 호출하는 것도 가능하지만, 특정 상황에서는 이러한 직접 호출이 문제가 될 수 있음
+    - 예를 들어, CarManager 객체 내부의 핵심 API가 변경된다고 가정했을 때, 이러한 경우에 메서드를 직접 호출하는 애플리케이션 내 모든 객체를 수정해야 하는 문제가 발생함.
+    - 이러한 종류의 강한 결합은 OOP에서 지향하는 ‘느슨한 결합’ 원칙에 위배됨
+    - 이 문제는 API를 보다 추상화함으로써 해결할 수 있음
+
+커맨드 패턴의 이점을 살리기 위해 CarManager 객체를 확장해보자.
+
+CarManager 객체에서 실행할 수 있는 메서드의 이름과 데이터(차량 모델, ID 등)를 매개변수로 받아 처리하는 구조로 개선할 것이다.
+
+```jsx
+CarManager.execute('buyVehicle', 'Ford Escort', '453543');
+```
+
+위 구조에 맞춰, carManager.execute 메서드의 정의를 추가한다.
+
+```jsx
+carManager.execute = function(name){
+	return(
+		carManager[name] &&
+		carManager[name].apply(carManager, [].slice.call(arguments, 1))
+	);
+};
+```
+
+최종 코드는 다음과 같다.
+
+```jsx
+carManager.execute('arrangeViewing', 'Ferrari', '14523');
+carManager.execute('requestInfo', 'Ford Mondeo', '54323');
+carManager.execute('requestInfo', 'Ford Escort', '34232');
+carManager.execute('buyVehicle', 'Ford Escort', '34232');
+```
